@@ -11,7 +11,7 @@ test('API: local parsing, clarification continuation, malformed request, complia
  const a=await POST(input('PE上限设为20'));assert.equal(a.status,200);assert.equal((await a.json()).mode,'local');
  const b=await POST(input('机构活跃度'));const q=await b.json();assert.equal(q.kind,'clarify');
  const c=await POST(input('第一个',{history:[{role:'assistant',content:JSON.stringify(q)}]}));const q2=await c.json();assert.equal(q2.kind,'clarify');
- const d=await POST(input('2到6',{history:[{role:'assistant',content:JSON.stringify(q2)}]}));const p=await d.json();assert.equal(p.kind,'proposal');assert.deepEqual(p.plan.trend.filter(r=>r.field==='institutionDays').map(r=>r.value),[2,6]);
+ const d=await POST(input('2到6',{history:[{role:'assistant',content:JSON.stringify(q2)}]}));const p=await d.json();assert.equal(p.kind,'proposal');assert.deepEqual(p.plan.fundamental.filter(r=>r.field==='institutionDays').map(r=>r.value),[2,6]);
  assert.equal((await POST(input('行业龙头且竞争优势可持续'))).status,503);
  assert.equal((await POST(input('保证收益'))).status,422);
  assert.equal((await POST(new Request('https://local.test',{method:'POST',body:'{broken'}))).status,400);

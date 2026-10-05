@@ -18,5 +18,5 @@ export function shortTermIndicators(bars:Candle[]){
  for(let i=14;i<tr.length;i++){atr=(atr*13+tr[i])/14;gain=(gain*13+Math.max(0,changes[i]))/14;loss=(loss*13+Math.max(0,-changes[i]))/14}
  out.atr14Pct=atr/last*100;out.rsi14=gain===0&&loss===0?50:loss===0?100:100-100/(1+gain/loss);
  const b=bars.at(-1)!;out.closePosition=b.high>b.low?(b.close-b.low)/(b.high-b.low)*100:50;
- return out;
+ out.breakout5Distance=(last/Math.max(...bars.slice(-6,-1).map(b=>b.high))-1)*100;out.pullback5=(1-last/Math.max(...c.slice(-5)))*100;out.range5=(Math.max(...bars.slice(-5).map(b=>b.high))/Math.min(...bars.slice(-5).map(b=>b.low))-1)*100;return out;
 }

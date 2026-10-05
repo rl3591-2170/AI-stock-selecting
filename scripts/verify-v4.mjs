@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-const snapshot=JSON.parse(await fs.readFile('public/data/snapshot.json','utf8'));
+const snapshot=JSON.parse(await fs.readFile('tests/fixtures/legacy-snapshot.json','utf8'));
 const plan={fundamental:[{id:'pe',field:'pe',op:'<=',value:60}],trend:[{id:'ma',field:'ma5Distance',op:'<=',value:6}],industry:'',themes:[],excludeST:true};
 const cases=[
  ['只看半导体或PCB，PE不超过80','proposal'],

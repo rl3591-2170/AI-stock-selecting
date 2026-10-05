@@ -1,9 +1,11 @@
+import {industries as knownIndustries} from './roster.ts';
 import {themes,themeAliases} from './universe.ts';
 import {fields,rule,trendPresets,planChanges,type Field,type Plan,type Group,type Style} from './screener.ts';
 export type Turn={role:'user'|'assistant';content:string};
 export type Question={text:string;options:{label:string;message:string}[]};
-export type IntentResult={kind:'proposal'|'clarify'|'unsupported';summary:string;plan?:Plan;questions:Question[];unsupported:string[];assumptions:string[];changes:string[];mode:'local'|'model'};
+export type IntentResult={kind:'proposal'|'clarify'|'unsupported';summary:string;plan?:Plan;questions:Question[];unsupported:string[];assumptions:string[];changes:string[];mode:'local'|'model';baseRevision?:string;trace?:{requestId:string;elapsedMs:number;stages:string[];checks?:unknown}};
 export const aliases:Record<string,Field>={
+ '经营现金流净額':'operatingCash','经营现金流净额':'operatingCash','现金利润比':'cashProfitRatio','经营现金流/净利润':'cashProfitRatio','市销率':'ps','ps':'ps','距5日前高':'breakout5Distance','近5日回撤':'pullback5','5日区间宽度':'range5','近5日机构上榜天数':'institution5Days',
  '归母净利率':'netMargin','扣非利润占比':'coreProfitShare','扣非利润占归母利润':'coreProfitShare','扣非归母净利润':'deductedProfit','atr14':'atr14Pct','atr':'atr14Pct','rsi14':'rsi14','rsi':'rsi14','收盘位置':'closePosition','距ma5':'ma5Distance','距5日均线':'ma5Distance','距ma10':'ma10Distance','距10日均线':'ma10Distance','ma5近3日变化':'ma5Slope','ma10近3日变化':'ma10Slope','近3日上穿ma5':'cross5In3','近3日上穿ma10':'cross10In3','近3日上穿ma20':'cross20In3',
  '营收增长率':'revenueGrowth','营收增速':'revenueGrowth','营收同比':'revenueGrowth','营收同比增长':'revenueGrowth','利润增速':'profitGrowth','净利润增长率':'profitGrowth','归母净利润同比增长':'profitGrowth','净利润同比':'profitGrowth','归母净利润':'profit','净利润':'profit',
  'pe(ttm)':'pe','pe':'pe','市盈率':'pe','pb':'pb','市净率':'pb','总市值':'marketCap','市值':'marketCap','roe':'roe','净资产收益率':'roe','资产负债率':'debtRatio','净利润现金含量':'cashContent',
@@ -20,10 +22,10 @@ export function localInterpret(message:string,current:Plan,style:Style,industrie
  const suppliedRange=msg.match(/(-?\d+(?:\.\d+)?)(?:到|至|和|~|～)(-?\d+(?:\.\d+)?)/);
  const rangeSuffix=suppliedRange?`在${suppliedRange[1]}到${suppliedRange[2]}之间`:'';
  const question=(text:string,options:Question['options']):IntentResult=>({...result,kind:'clarify',summary:'先确认这一处含义，现有条件尚未改变。',questions:[{text,options}]});
- if(/稳健|稳一点|更稳|稳一些/.test(msg))return question('“稳”是指价格波动较小，还是公司的财务负担较轻？',[{label:'价格波动较小',message:'波动率上限设为25%'},{label:'财务负担较轻',message:'资产负债率上限设为50%'}]);
- if(/机构活跃度/.test(msg))return question('机构活跃度没有唯一口径。选择你要研究的披露指标；必须加载完整披露才能使用，未上榜不能据此判断机构未参与。',[{label:'近20日上榜天数',message:rangeSuffix?'机构席位上榜天数'+rangeSuffix:'机构席位上榜天数'},{label:'当日净买入占成交额',message:rangeSuffix?'机构席位净买入占比'+rangeSuffix:'机构席位净买入占比'}]);
+ if(/稳健|稳一点|更稳|稳一些/.test(msg))return question('“稳”是指价格波动较小，还是公司的财务负担较轻？',[{label:'价格波动较小',message:style==='trend'?'ATR上限设为4%':'波动率上限设为25%'},{label:'财务负担较轻',message:'资产负债率上限设为50%'}]);
+ if(/机构活跃度/.test(msg))return question('机构活跃度没有唯一口径。选择你要研究的披露指标；必须加载完整披露才能使用，未上榜不能据此判断机构未参与。',[{label:style==='trend'?'近5日上榜天数':'近20日上榜天数',message:(style==='trend'?'近5日机构上榜天数':'机构席位上榜天数')+rangeSuffix},{label:'当日净买入占成交额',message:rangeSuffix?'机构席位净买入占比'+rangeSuffix:'机构席位净买入占比'}]);
  if(/资金集中度/.test(msg))return question('这里可以定义成交额集中度；它不等于机构持仓集中度。是否采用这个口径？',[{label:'采用板块前5股成交额占比',message:rangeSuffix?'成交额集中度'+rangeSuffix:'成交额集中度'}]);
- if(/回调/.test(msg)&&!Object.keys(trendPresets).some(k=>msg===trendPresets[k as keyof typeof trendPresets].label)&&!/[\d]/.test(msg))return question('你说的回调，更想观察价格回到哪里？',[{label:'20日均线附近',message:'均线距离在-3到3之间'},{label:'较近期高点回落',message:'高点回撤在3到8之间'},{label:'采用趋势回调示例',message:'使用趋势回调模板'}]);
+ if(/回调/.test(msg)&&!Object.keys(trendPresets).some(k=>msg===trendPresets[k as keyof typeof trendPresets].label)&&!/[\d]/.test(msg))return question('你说的回调，更想观察价格回到哪里？',[{label:'10日均线附近',message:'距MA10在-2到3之间'},{label:'较近期高点回落',message:'近5日回撤在2到5之间'},{label:'采用缩量回踩示例',message:'使用缩量回踩10日线模板'}]);
  if(/放宽一点|放宽些|放宽点|收紧一点|收紧些/.test(msg)){
  const alias=Object.keys(aliases).sort((a,b)=>b.length-a.length).find(a=>msg.includes(a));
  if(alias){const field=aliases[alias],r=[...current.fundamental,...current.trend].find(r=>r.field===field&&r.op.startsWith('<'));if(r){const v=Number((r.value+(msg.includes('收紧')?-1:1)*Math.max(Math.abs(r.value)*0.2,1)).toFixed(2));return question(`当前${fields[field].label}上限为${r.value}。下面仅提出可修改的幅度，不自动执行。`,[{label:`调整至${v}${fields[field].unit}`,message:`${alias}上限设为${v}`}])}}
@@ -31,15 +33,15 @@ export function localInterpret(message:string,current:Plan,style:Style,industrie
  }
  for(const preset of Object.values(trendPresets))if(msg===preset.label.toLowerCase()||msg===`使用${preset.label.toLowerCase()}模板`){plan.trend=preset.rules.map(r=>({...r,id:rule(r.field,r.op,r.value).id}));return {...result,kind:'proposal',summary:`提出「${preset.label}」示例条件，基本面规则保持不变。`,plan,assumptions:[preset.description,'模板阈值是明确示例，未经过收益回测验证。'],changes:planChanges(current,plan)}}
  if(/cbo/.test(msg))return question('你说的 CBO 是指 CPO（共封装光学）产业链吗？',[{label:'是，CPO / 高速光模块',message:original.replace(/cbo/ig,'CPO')}]);
- if(/^(不限题材|清除题材限制|所有题材)$/.test(msg)){plan.themes=[];return {...result,kind:'proposal',summary:'移除题材限制，行业和数值规则保留。',plan,changes:planChanges(current,plan)}}
+ if(/^(不限板块|清除板块限制|所有板块|不限题材|清除题材限制|所有题材)$/.test(msg)){plan.themes=[];plan.sectors=[];plan.industry='';return {...result,kind:'proposal',summary:'移除全部板块限制，数值规则保留。',plan,changes:planChanges(current,plan)}}
  const themeScope=msg.match(/^(?:只看|题材(?:改为|设为|是|为)?|板块(?:改为|设为|是|为)?)(.+)$/);
- if(themeScope){const parts=themeScope[1].replace(/(?:板块|题材)$/,'').split(/或|或者|、|和|\/|及/);const tags=parts.map(x=>themeAliases[x]);if(tags.every(Boolean)){plan.themes=[...new Set(tags)];return {...result,kind:'proposal',summary:'题材之间取并集，再与行业及数值条件取交集。',plan,assumptions:['题材来自公司业务披露，非完整板块成分或热点排名。'],changes:planChanges(current,plan)}}}
+ if(themeScope){const parts=themeScope[1].replace(/(?:板块|题材)$/,'').split(/或者|或|、|和|\/|及/);const tags=parts.map(x=>themeAliases[x]||industries.find(i=>i.toLowerCase()===x));if(tags.every(Boolean)){plan.sectors=[...new Set(tags)] as string[];plan.themes=[];plan.industry='';return {...result,kind:'proposal',summary:'已选板块之间取并集，再与数值条件取交集。',plan,assumptions:['板块入口同时收录行业分类与业务题材，不代表实时热点排名。'],changes:planChanges(current,plan)}}}
  const maEvent=msg.match(/^(?:最近3日|近3日|近日)?(?:突破|上穿|站上)(?:ma)?(5|10|20)(?:日线|日均线)?$/);
- if(maEvent){const n=maEvent[1];const cross=!msg.includes('站上');const field=(cross?`cross${n}In3`:n==='20'?'maDistance':`ma${n}Distance`) as Field;const next=rule(field,cross?'>=':'>',cross?1:0);plan.trend=plan.trend.filter(r=>r.field!==field);plan.trend.push(next);return {...result,kind:'proposal',summary:cross?'检查最近3个观测日是否发生由下向上穿越。':'只检查当前收盘价是否在线上，不要求最近上穿。',plan,assumptions:cross?['“近日”定义为最近3个观测日，之后可能再次跌破。']:[],changes:planChanges(current,plan)}}
- if(/^(不限行业|清除行业限制|所有行业)$/.test(msg)){plan.industry='';return {...result,kind:'proposal',summary:'移除行业限制，其余条件保留。',plan,changes:planChanges(current,plan)}}
+ if(maEvent){const n=maEvent[1];const cross=!msg.includes('站上');const field=(cross?`cross${n}In3`:n==='20'?'maDistance':`ma${n}Distance`) as Field;const next=rule(field,cross?'>=':'>',cross?1:0);const group=fields[field].group;plan[group]=plan[group].filter(r=>r.field!==field);plan[group].push(next);return {...result,kind:'proposal',summary:cross?'检查最近3个观测日是否发生由下向上穿越。':'只检查当前收盘价是否在线上，不要求最近上穿。',plan,assumptions:cross?['“近日”定义为最近3个观测日，之后可能再次跌破。']:[],changes:planChanges(current,plan)}}
+ if(/^(不限行业|清除行业限制|所有行业)$/.test(msg)){plan.industry='';plan.sectors=(plan.sectors||[]).filter(s=>!industries.includes(s));return {...result,kind:'proposal',summary:'移除目录中的行业范围，其他题材和数值条件保留。',plan,changes:planChanges(current,plan)}}
  const sector=msg.match(/^(?:只看|行业(?:改为|设为|是|为)|板块(?:改为|设为|是|为))(.+?)(?:行业|板块)?$/);
- if(sector){const target=industries.find(i=>i.toLowerCase()===sector[1]||i.toLowerCase().replace(/ⅱ|ⅰ|Ⅱ|Ⅰ/g,'')===sector[1]);if(!target)return {...result,summary:'该名称不在当前行业目录中，未改变范围。',unsupported:[`「${sector[1]}」可能是概念题材或不同分类。当前只有样本所属行业，不能假设行业与题材相同。`]};plan.industry=target;return {...result,kind:'proposal',summary:`行业限定为${target}，两套模型采用相同范围。`,plan,changes:planChanges(current,plan)}}
- if(['机构席位上榜天数','机构席位净买入占比','成交额集中度'].includes(msg))return question('口径已明确。请输入你的上下限，或选择下面的示例；示例阈值不是推荐参数。',[{label:msg==='机构席位上榜天数'?'示例：1–5天':'示例：0%–20%',message:msg+(msg==='机构席位上榜天数'?'在1到5之间':'在0到20之间')}]);
+ if(sector){const target=industries.find(i=>i.toLowerCase()===sector[1]||i.toLowerCase().replace(/ⅱ|ⅰ|Ⅱ|Ⅰ/g,'')===sector[1]);if(!target)return {...result,summary:'该名称不在当前行业目录中，未改变范围。',unsupported:[`「${sector[1]}」可能是概念题材或不同分类。当前只有样本所属行业，不能假设行业与题材相同。`]};plan.sectors=[target];plan.industry='';plan.themes=[];return {...result,kind:'proposal',summary:`行业限定为${target}，两套模型采用相同范围。`,plan,changes:planChanges(current,plan)}}
+ if(['近5日机构上榜天数','机构席位上榜天数','机构席位净买入占比','成交额集中度'].includes(msg))return question('口径已明确。请输入你的上下限，或选择下面的示例；示例阈值不是推荐参数。',[{label:msg.includes('上榜天数')?'示例：1–5天':'示例：0%–20%',message:msg+(msg.includes('上榜天数')?'在1到5之间':'在0到20之间')}]);
  const parts=msg.split(/[，,；;]|并且|而且/).filter(Boolean);let matched=0;
  for(const part of parts){
   const text=part.replace(/^(请|帮我)/,'').replace(/^把/,'');
@@ -67,11 +69,12 @@ export function localInterpret(message:string,current:Plan,style:Style,industrie
  }
  if(!matched)return null;
  if(result.unsupported.length)return {...result,summary:'部分内容无法按明确规则解析，尚未修改任何条件。请拆成明确指标或使用模型解析。'};
- const targetGroup=style==='intersection'?'两套':style==='fundamental'?'基本面':'趋势';
+ const targetGroup=style==='intersection'?'两套':style==='fundamental'?'价值与基本面':'波段';
  return {...result,kind:'proposal',summary:`已提出条件修改，未提及的规则保持不变。当前查看${targetGroup}结果。`,plan,changes:planChanges(current,plan),assumptions:['使用明确语法的本地规则解析，不是大模型推理。']};
 }
 export function validatePlanShape(plan:unknown):plan is Plan{
  if(!plan||typeof plan!=='object')return false;const p=plan as Plan;
+ if(p.sectors!==undefined&&(!Array.isArray(p.sectors)||p.sectors.length>60||p.sectors.some(t=>typeof t!=='string'||![...themes,...knownIndustries].includes(t))||new Set(p.sectors).size!==p.sectors.length))return false;
  if(p.themes!==undefined&&(!Array.isArray(p.themes)||p.themes.length>themes.length||p.themes.some(t=>typeof t!=='string'||!themes.includes(t))||new Set(p.themes).size!==p.themes.length))return false;
  if(p.excludeST!==undefined&&typeof p.excludeST!=='boolean')return false;
  if(typeof p.industry!=='string'||p.industry.length>80)return false;
@@ -113,6 +116,6 @@ export function scopeSemanticsError(prompt:string,before:Plan,after:Plan):string
  const lower=prompt.toLowerCase();
  const requested=[...new Set(Object.entries(themeAliases).filter(([alias])=>lower.includes(alias)).map(([,theme])=>theme))];
  if(requested.length<2)return null;
- if(requested.some(t=>!after.themes?.includes(t))||after.industry!==before.industry)return '题材并集被错误映射为行业交集';
+ if(requested.some(t=>!(after.sectors??after.themes)?.includes(t))||(!after.sectors&&after.industry!==before.industry))return '题材并集被错误映射为行业交集';
  return null;
 }

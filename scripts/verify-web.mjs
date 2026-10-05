@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-const snapshot=JSON.parse(await fs.readFile('public/data/snapshot.json','utf8'));
+const snapshot=JSON.parse(await fs.readFile('tests/fixtures/legacy-snapshot.json','utf8'));
 const out=[];let i=0;async function worker(){while(i<snapshot.stocks.length){const s=snapshot.stocks[i++];const r=await fetch(`http://127.0.0.1:5173/api/stock-data?code=${s.code}`);const body=await r.json();out.push({code:s.code,status:r.status,...body});console.log(s.code,r.status,body.error||`${body.stock.bars.length} bars; ROE ${body.stock.metrics.roe}`)}}if(!process.argv.includes('--model-only'))await Promise.all([worker(),worker()]);if(out.length)await fs.writeFile('work/primary-audit.json',JSON.stringify(out,null,2));
 const rule=(field,op,value)=>({id:field,field,op,value});const plan={fundamental:[rule('pe','<=',25)],trend:[rule('maDistance','<=',5)],industry:''};
 const r=await fetch('http://127.0.0.1:5173/api/interpret',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:'我希望寻找盈利增长有持续性，而且股价最近不要太剧烈波动的公司，你会如何把这个想法拆成可检查的条件？',plan,style:'intersection',history:[]})});const model=await r.json();await fs.writeFile('work/model-web-audit.json',JSON.stringify({status:r.status,...model},null,2));console.log('model',r.status,model.kind,model.mode,model.code,model.error||model.summary);

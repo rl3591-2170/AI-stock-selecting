@@ -1,0 +1,3 @@
+import {marketContext} from '../../../lib/official-data';
+import {ProviderError} from '../../../lib/providers/fuyao';
+export async function GET(){try{const c=await marketContext();return Response.json({asOf:c.asOf,fetchedAt:c.fetchedAt,quoteBatchTime:c.quotes.data.timestamp,valuationBatchTime:c.valuations.data.timestamp,quotes:c.quotes.data.item.map(r=>({code:r.ticker,price:r.last_price,changePct:r.price_change_ratio_pct})),source:'扶摇 API',note:'波段指标只使用最新完整收盘日线；最新报价单独展示，不将盘中累计成交量与完整日均量直接比较。批次时间不是每只股票逐笔时间。'},{headers:{'Cache-Control':'private, no-store'}})}catch(e){return Response.json({error:e instanceof ProviderError?e.message:'官方数据初始化失败，未生成替代数据。',stage:'market-context'},{status:502})}}

@@ -1,11 +1,14 @@
-import snapshot from '../../../public/data/snapshot.json';
-import {loadFuyaoStock} from '../../../lib/market-data';
+import {roster} from '../../../lib/roster';
+import {loadOfficialStock,marketContext} from '../../../lib/official-data';
 import {ProviderError} from '../../../lib/providers/fuyao';
 import type {Stock} from '../../../lib/screener';
-// Bounded, fixed universe; cache promises to coalesce repeated requests. No credentials in responses.
 const cache=new Map<string,{expires:number;value:Promise<Stock>}>();
 export async function GET(req:Request){
- const code=new URL(req.url).searchParams.get('code'),base=snapshot.stocks.find(s=>s.code===code);
- if(!base)return Response.json({error:'仅支持当前研究样本。'},{status:400});
- try{let entry=cache.get(base.code);if(!entry||entry.expires<Date.now()){const value=loadFuyaoStock(base as Stock,snapshot.asOf);entry={expires:Date.now()+3600000,value};cache.set(base.code,entry);value.catch(()=>cache.delete(base.code))}return Response.json({stock:await entry.value},{headers:{'Cache-Control':'private, no-store'}})}catch(e){return Response.json({error:e instanceof ProviderError?e.message:'扶摇暂不可用；未生成替代数值。'},{status:502})}
+ const params=new URL(req.url).searchParams,base=roster.find(s=>s.code===params.get('code'));
+ if(!base)return Response.json({error:'仅支持当前50只研究样本。'},{status:400});
+ try{const ctx=await marketContext();if(params.get('asOf')&&params.get('asOf')!==ctx.asOf)return Response.json({error:'完整交易日已更新，请刷新整批数据。',code:'ASOF_CHANGED'},{status:409});
+ const key=`${base.code}:${ctx.asOf}:${ctx.valuations.data.timestamp}`;let entry=cache.get(key);
+ if(!entry||entry.expires<Date.now()){const value=loadOfficialStock(base,ctx);entry={expires:Date.now()+300000,value};cache.set(key,entry);value.catch(()=>{if(cache.get(key)?.value===value)cache.delete(key)});if(cache.size>100)cache.delete(cache.keys().next().value!)}
+ return Response.json({stock:await entry.value},{headers:{'Cache-Control':'private, no-store'}});
+ }catch(e){return Response.json({error:e instanceof ProviderError?e.message:'扶摇数据校验失败；未生成替代数值。',stage:'stock-data',code:base.code},{status:502})}
 }

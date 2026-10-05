@@ -1,8 +1,7 @@
-import snapshot from '../../../public/data/snapshot.json';
+import {roster} from '../../../lib/roster';
+import {marketContext,shanghaiDate} from '../../../lib/official-data';
 import {createFuyao,ProviderError} from '../../../lib/providers/fuyao';
 import {institutionalMetrics} from '../../../lib/institution';
-// Union of observed dates, then validate each with the provider's trading-day-only endpoint.
-const dates=[...new Set(snapshot.stocks.flatMap(s=>s.prices.map(p=>p.date)))].sort().slice(-20);
-async function load(){const api=createFuyao(),receipts:Awaited<ReturnType<typeof api.institution>>[]=[];for(const date of dates)receipts.push(await api.institution(date));return {dates,coverage:20,stocks:snapshot.stocks.map(s=>({code:s.code,metrics:institutionalMetrics(s.code,dates,receipts)})),evidence:receipts,note:'完整查询20个交易日机构榜；仅计range_days=1。0表示未见当日榜记录，不代表没有机构交易。未上榜或缺成交金额时，净买入占比未知。'}}
-let cached:ReturnType<typeof load>|null=null;
-export async function GET(){try{cached??=load().catch(e=>{cached=null;throw e});return Response.json(await cached,{headers:{'Cache-Control':'private, no-store'}})}catch(e){return Response.json({error:e instanceof ProviderError?e.message:'机构榜获取失败，未启用该指标。'},{status:502})}}
+let cache:{asOf:string;promise:ReturnType<typeof load>}|null=null;
+async function load(asOf:string,start:string){const api=createFuyao();const bars=await api.historical(roster[0].thscode,start,asOf);const dates=[...new Set(bars.data.item.map(b=>shanghaiDate(b.date_ms)))].sort().slice(-20);if(dates.length!==20)throw new ProviderError('INSUFFICIENT_INSTITUTION_DATES');const receipts:Awaited<ReturnType<typeof api.institution>>[]=[];for(const date of dates)receipts.push(await api.institution(date));return {asOf,dates,coverage:dates.length,stocks:roster.map(s=>({code:s.code,metrics:{...institutionalMetrics(s.code,dates,receipts),institution5Days:institutionalMetrics(s.code,dates.slice(-5),receipts.slice(-5),5).institutionDays}})),evidence:receipts,note:'完整覆盖后0只表示未见当日机构席位披露，不代表机构未参与。5日用于波段，20日用于价值与基本面辅助观察。'}}
+export async function GET(){try{const c=await marketContext();if(!cache||cache.asOf!==c.asOf){const promise=load(c.asOf,c.start);cache={asOf:c.asOf,promise};promise.catch(()=>{if(cache?.promise===promise)cache=null})}return Response.json(await cache.promise,{headers:{'Cache-Control':'private, no-store'}})}catch(e){return Response.json({error:e instanceof ProviderError?e.message:'机构披露加载失败，相关条件保持未知。'},{status:502})}}

@@ -2,7 +2,7 @@
 import json, statistics, math
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-p=root/'public/data/snapshot.json';data=json.loads(p.read_text())
+p=root/'tests/fixtures/legacy-snapshot.json';data=json.loads(p.read_text())
 mean=lambda a:sum(a)/len(a)
 for s in data['stocks']:
  e=json.loads((root/'public'/s['evidencePath'].lstrip('/')).read_text())

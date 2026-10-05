@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs';
 import {derivePrices} from '../lib/market-data.ts';
 import {fields,type Snapshot} from '../lib/screener.ts';
-const path='public/data/snapshot.json';const data=JSON.parse(readFileSync(path,'utf8')) as Snapshot;
+const path='tests/fixtures/legacy-snapshot.json';const data=JSON.parse(readFileSync(path,'utf8')) as Snapshot;
 for(const s of data.stocks){
  const e=JSON.parse(readFileSync('public'+s.evidencePath,'utf8'));
  const lines=e.records.prices?.raw.daily;if(!lines)throw Error('Missing prices: '+s.code);
