@@ -21,6 +21,7 @@ CODES = ['600519','000858','000568','600887','603288','000333','000651','600690'
          '300750','002594','601012','600438','600309','002415','300059','600036',
          '601318','601398','600900','601088','600028','601857','601668','600406',
          '002475','000063','600276','000538','600585','600048']
+CODES += [s['code'] for s in json.loads((OUT/'universe.json').read_text()) if s['code'] not in CODES]
 
 def request(url):
     for attempt in range(3):
@@ -97,11 +98,14 @@ def fetch(code):
 
 if __name__ == '__main__':
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
-        stocks = list(pool.map(fetch,CODES))
+        existing={s['code']:s for s in json.loads((OUT/'snapshot.json').read_text())['stocks']} if (OUT/'snapshot.json').exists() else {}
+        fresh=list(pool.map(fetch,[c for c in CODES if c not in existing]))
+        existing.update({s['code']:s for s in fresh})
+        stocks=[existing[c] for c in CODES]
     dataset = {'version':'snapshot-20260930-v1','asOf':ASOF, 'financialPeriod':PERIOD,
         'fetchedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'source':'东方财富（财务、估值）与腾讯证券（前复权行情）公开接口',
-        'universe':'手工选取的30只A股研究样本，非指数成分、非全市场、非推荐名单',
+        'universe':'手工选取的50只A股研究样本，非指数成分、非全市场、非推荐名单',
         'limitations':['固定历史快照，不是实时行情；不用于历史回测。',
           '当前接口可能返回后续修订记录，披露日晚于基准日的财务记录不参与筛选；不承诺历史时点数据库。',
           '行情为获取时点的前复权序列；波动率使用最近60个观测日收益率，停牌跨日收益可能影响可比性。',

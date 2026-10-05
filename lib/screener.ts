@@ -1,8 +1,23 @@
+import {stockThemes} from './universe.ts';
 export type Style='fundamental'|'trend'|'intersection';
 export type Group='fundamental'|'trend';
 type Definition={label:string;unit:string;source:'financial'|'valuation'|'prices'|'sector'|'institution';raw:string;definition:string;group:Group;category:string;pending?:string};
 const f=(label:string,unit:string,source:Definition['source'],raw:string,definition:string,group:Group,category:string,pending?:string):Definition=>({label,unit,source,raw,definition,group,category,pending});
 export const fields={
+ netMargin:f('归母净利率','%','financial','PARENT_NETPROFIT / TOTAL_OPERATE_INCOME × 100','报告期归母净利润/营业总收入；用于同类业务盈利能力比较，不等于合并销售净利率。','fundamental','盈利质量'),
+ coreProfitShare:f('扣非利润占归母利润','%','financial','DEDUCT_PARENT_NETPROFIT / PARENT_NETPROFIT × 100','仅归母净利润为正时适用；扣非比例低提示非经常性损益影响，超过100%可能存在非经常性损失。','fundamental','盈利质量'),
+ deductedProfit:f('扣非归母净利润','元','financial','DEDUCT_PARENT_NETPROFIT','2026年上半年累计，排除非经常性损益后的归母净利润。亏损企业不以负PE估值。','fundamental','盈利质量'),
+ atr14Pct:f('ATR14 / 收盘价','%','prices','Wilder ATR(14) / close × 100','真实波幅取当日高低差及相对昨收跳空的最大值，14期Wilder平滑后除以收盘价。衡量日常波动幅度，不预测方向。','trend','波动风险'),
+ rsi14:f('RSI14','点','prices','100 - 100 / (1 + Wilder avg gain / avg loss)','14期Wilder平滑强弱指标，0–100；不是相对行业强弱，超过70也不等于马上下跌。','trend','动量'),
+ closePosition:f('收盘在当日区间位置','%','prices','(close-low)/(high-low) × 100','0在最低、100在最高；高低相同设中性50。只刻画收盘强弱，不推断主力意图。','trend','收盘强弱'),
+ ma5Distance:f('收盘价距 MA5','%','prices','(close / SMA(5) - 1) × 100','正数为站上5日均线，负数为线下；站上不代表近日发生上穿。','trend','短期位置'),
+ ma5Slope:f('MA5 近3日变化','%','prices','(MA5[t] / MA5[t-3] - 1) × 100','均线相对3个观测日前的变化，正数为向上。','trend','短期趋势'),
+ ma10Distance:f('收盘价距 MA10','%','prices','(close / SMA(10) - 1) × 100','正数为站上10日均线，负数为线下；站上不代表近日发生上穿。','trend','短期位置'),
+ ma10Slope:f('MA10 近3日变化','%','prices','(MA10[t] / MA10[t-3] - 1) × 100','均线相对3个观测日前的变化，正数为向上。','trend','短期趋势'),
+ cross5In3:f('近3日上穿 MA5','0否 / 1是','prices','any(close[t-1] <= MA5[t-1] && close[t] > MA5[t]) over last 3 observations','必须从前一日线下或线上的相等点转为线上；之后可能再跌破，可配合当前站上条件。1为发生、0为未发生。','trend','突破事件'),
+ cross10In3:f('近3日上穿 MA10','0否 / 1是','prices','any(close[t-1] <= MA10[t-1] && close[t] > MA10[t]) over last 3 observations','必须从前一日线下或线上的相等点转为线上；之后可能再跌破，可配合当前站上条件。1为发生、0为未发生。','trend','突破事件'),
+ cross20In3:f('近3日上穿 MA20','0否 / 1是','prices','any(close[t-1] <= MA20[t-1] && close[t] > MA20[t]) over last 3 observations','必须从前一日线下或线上的相等点转为线上；之后可能再跌破，可配合当前站上条件。1为发生、0为未发生。','trend','突破事件'),
+
  revenueGrowth:f('营收同比增长','%','financial','TOI_RATIO','2026年上半年累计同比；扶摇采用营业收入，公开备用快照采用营业总收入。金融等行业需注意口径差异。','fundamental','成长'),
  profitGrowth:f('归母净利润同比增长','%','financial','PARENT_NETPROFIT_RATIO','2026年上半年累计归母净利润同比。低基数或亏损收窄不等同于盈利。','fundamental','成长'),
  profit:f('归母净利润','元','financial','PARENT_NETPROFIT','2026年上半年累计归母净利润。','fundamental','盈利'),
@@ -35,21 +50,24 @@ export const fields={
 } as const;
 export type Field=keyof typeof fields;
 export type Rule={id:string;field:Field;op:'>'|'>='|'<'|'<=';value:number};
-export type Plan={fundamental:Rule[];trend:Rule[];industry:string};
-export type Bar={date:string;open:number;high:number;low:number;close:number;volume:number;ma20?:number|null;ma60?:number|null};
+export type Plan={fundamental:Rule[];trend:Rule[];industry:string;themes?:string[];excludeST?:boolean};
+export type Bar={date:string;open:number;high:number;low:number;close:number;volume:number;ma5?:number|null;ma10?:number|null;ma20?:number|null;ma60?:number|null};
 export type Stock={code:string;name:string;industry:string;metrics:Partial<Record<Field|'price'|'revenue',number|null>>;evidence?:unknown;errors:string[];sources:Record<string,string>;prices:{date:string;close:number}[];bars?:Bar[];evidencePath:string;reportDate?:string;disclosedAt?:string;tradeDate?:string;provenance?:Record<string,{provider:string;date:string;formula?:string}>};
 export type Snapshot={version:string;asOf:string;financialPeriod:string;fetchedAt:string;source:string;universe:string;limitations:string[];stocks:Stock[]};
 export type Check={rule:Rule;status:'pass'|'fail'|'unknown';actual:number|null;reason:string};
 export type Issue={kind:'conflict'|'duplicate'|'tradeoff'|'unavailable';text:string;ids:string[];removeId?:string};
 export const rule=(field:Field,op:Rule['op'],value:number):Rule=>({id:`${field}-${crypto.randomUUID()}`,field,op,value});
-export const fundamentalDefaults:Rule[]=[rule('revenueGrowth','>',0),rule('profitGrowth','>',0),rule('profit','>',0),rule('pe','<=',25)];
+export const fundamentalDefaults:Rule[]=[rule('revenueGrowth','>=',10),rule('netMargin','>=',5),rule('coreProfitShare','>=',80),rule('pe','<=',60)];
+export const fundamentalPresets={growth:{label:'成长与盈利质量',rules:fundamentalDefaults},value:{label:'稳健盈利估值',rules:[rule('revenueGrowth','>=',0),rule('coreProfitShare','>=',80),rule('pe','<=',25),rule('pb','<=',4)]},research:{label:'研发成长观察',rules:[rule('revenueGrowth','>=',20),rule('marketCap','>=',30)]}};
 export const trendPresets={
+ short:{label:'短线量价观察',description:'10日方向、5日位置、当日量能和真实波幅各管一个维度',rules:[rule('ma10Slope','>',0),rule('ma5Distance','>=',0),rule('ma5Distance','<=',6),rule('volumeRatio','>=',1.2),rule('volumeRatio','<=',3),rule('atr14Pct','<=',6)]},
+ cross:{label:'近日上穿5日线',description:'最近3日出现上穿，当前仍站在线上；限制偏离与波幅',rules:[rule('cross5In3','>=',1),rule('ma5Distance','>=',0),rule('ma5Distance','<=',5),rule('volumeRatio','>=',1),rule('atr14Pct','<=',6)]},
  pullback:{label:'趋势回调',description:'趋势向上，回到均线附近，近期量能收缩',rules:[rule('maSpread','>',0),rule('maSlope','>',0),rule('maDistance','>=',-5),rule('maDistance','<=',5),rule('pullback10','>',0),rule('pullback10','<=',10),rule('volume3Ratio','<',1)]},
  breakout:{label:'放量越过前高',description:'收盘越过此前20日高点，配合当日放量',rules:[rule('breakoutDistance','>',0),rule('breakoutDistance','<=',5),rule('volumeRatio','>=',1.5),rule('maSlope','>',0)]},
  consolidation:{label:'整理接近前高',description:'尚未突破，区间较窄，接近此前20日高点',rules:[rule('breakoutDistance','>=',-5),rule('breakoutDistance','<=',0),rule('range10','<=',12),rule('volume3Ratio','<=',1)]},
  month:{label:'近一月趋势',description:'个股一个月走势观察；不等同于题材主线识别',rules:[rule('return20','>',0),rule('maSpread','>',0),rule('maSlope','>',0),rule('maDistance','<=',10)]},
 };
-export const initialPlan:Plan={fundamental:fundamentalDefaults,trend:trendPresets.pullback.rules,industry:''};
+export const initialPlan:Plan={fundamental:fundamentalDefaults,trend:trendPresets.short.rules,industry:'',excludeST:true};
 // Kept for tests and backward compatibility of the first prototype.
 export const defaultRules=[...fundamentalDefaults,rule('volatility','<=',30)];
 export function format(value:number|null|undefined,field:Field|'price'){
@@ -89,6 +107,6 @@ export function evaluate(stock:Stock,rules:Rule[]){
 }
 export function screen(stocks:Stock[],rules:Rule[]){const e=validateRules(rules);if(e.length)throw Error(e.join('；'));return stocks.map(s=>evaluate(s,rules))}
 export function activeRules(plan:Plan,mode:Style){return mode==='intersection'?[...plan.fundamental,...plan.trend]:plan[mode]}
-export function runPlan(stocks:Stock[],plan:Plan,mode:Style){return screen(stocks.filter(s=>!plan.industry||s.industry===plan.industry),activeRules(plan,mode))}
+export function runPlan(stocks:Stock[],plan:Plan,mode:Style){return screen(stocks.filter(s=>plan.excludeST===false||!/^\*?ST/i.test(s.name)).filter(s=>!plan.industry||s.industry===plan.industry).filter(s=>!plan.themes?.length||plan.themes.some(t=>stockThemes(s.code).includes(t))),activeRules(plan,mode))}
 export function diffResults(before:ReturnType<typeof screen>,after:ReturnType<typeof screen>){const old=new Set(before.filter(r=>r.status==='included').map(r=>r.stock.code)),now=new Set(after.filter(r=>r.status==='included').map(r=>r.stock.code));return {added:after.filter(r=>now.has(r.stock.code)&&!old.has(r.stock.code)).map(r=>r.stock),removed:before.filter(r=>old.has(r.stock.code)&&!now.has(r.stock.code)).map(r=>r.stock)}}
-export function planChanges(before:Plan,after:Plan){const changes:string[]=[];if(before.industry!==after.industry)changes.push(`行业：${before.industry||'不限'} → ${after.industry||'不限'}`);for(const g of ['fundamental','trend'] as Group[]){const label=g==='fundamental'?'基本面':'趋势';for(const r of before[g])if(!after[g].some(n=>n.field===r.field&&n.op===r.op&&n.value===r.value))changes.push(`${label}移除：${ruleText(r)}`);for(const r of after[g])if(!before[g].some(n=>n.field===r.field&&n.op===r.op&&n.value===r.value))changes.push(`${label}加入：${ruleText(r)}`)}return changes}
+export function planChanges(before:Plan,after:Plan){const changes:string[]=[];if(JSON.stringify(before.themes||[])!==JSON.stringify(after.themes||[]))changes.push(`题材：${before.themes?.join('、')||'不限'} → ${after.themes?.join('、')||'不限'}`);if((before.excludeST!==false)!==(after.excludeST!==false))changes.push(`ST范围：${after.excludeST===false?'包含':'排除'}`);if(before.industry!==after.industry)changes.push(`行业：${before.industry||'不限'} → ${after.industry||'不限'}`);for(const g of ['fundamental','trend'] as Group[]){const label=g==='fundamental'?'基本面':'趋势';for(const r of before[g])if(!after[g].some(n=>n.field===r.field&&n.op===r.op&&n.value===r.value))changes.push(`${label}移除：${ruleText(r)}`);for(const r of after[g])if(!before[g].some(n=>n.field===r.field&&n.op===r.op&&n.value===r.value))changes.push(`${label}加入：${ruleText(r)}`)}return changes}
