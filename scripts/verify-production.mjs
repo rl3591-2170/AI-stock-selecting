@@ -1,5 +1,4 @@
 // Read the owner-private Sites bypass credential from hidden stdin; never persist it.
-import readline from 'node:readline';
 import {writeFileSync} from 'node:fs';
 import {roster} from '../lib/roster.ts';
 import {initialPlan} from '../lib/screener.ts';
@@ -9,6 +8,7 @@ let text='';const input=await new Promise(resolve=>{process.stdin.on('data',c=>{
 const {origin,token}=input;
 const headers={'OAI-Sites-Authorization':`Bearer ${token}`};
 async function request(path,body){const r=await fetch(origin+path,{headers:{...headers,...(body?{'Content-Type':'application/json'}:{})},...(body?{method:'POST',body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(90000)});let a;try{a=await r.json()}catch{a={error:'NON_JSON_RESPONSE'}}return {status:r.status,data:a};}
+if(input.onlyIfind){const r=await request('/api/stock-evidence',{provider:'ifind',code:'600519',reportDate:'2026-06-30'});console.log({status:r.status,hasEvidence:!!r.data.evidence,error:r.data.error});process.exit(r.status===200?0:1)}
 const context=await request('/api/market-status');const out={at:new Date().toISOString(),origin,context:{status:context.status,asOf:context.data.asOf,error:context.data.error},stocks:[],ai:null,ifind:null};console.log(out.context);
 if(context.status===200){let cursor=0;async function worker(){while(cursor<roster.length){const s=roster[cursor++];const r=await request(`/api/stock-data?code=${s.code}&asOf=${context.data.asOf}`);out.stocks.push({code:s.code,status:r.status,error:r.data.error,hasQuote:typeof r.data.stock?.quote?.price==='number',hasCash:typeof r.data.stock?.metrics?.cashProfitRatio==='number',tradeDate:r.data.stock?.tradeDate});}}
  await Promise.all([worker(),worker()]);console.log({stocks:out.stocks.length,failed:out.stocks.filter(s=>s.status!==200),quoteCoverage:out.stocks.filter(s=>s.hasQuote).length});
