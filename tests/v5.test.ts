@@ -38,3 +38,12 @@ test('explicit standing above a moving average cannot silently include equality'
  assert.ok(boundarySemanticsError('股价站上五日均线，但偏离不要超过百分之三',p));
  assert.equal(boundarySemanticsError('股价站上五日均线',{...p,trend:[rule('ma5Distance','>',0)]}),null);
 });
+
+test('retired fields cannot return through presets, model proposals or local clarification',async()=>{
+ const {fundamentalPresets,trendPresets}=await import('../lib/screener.ts');const {validatePlanShape,aliases}=await import('../lib/intent.ts');
+ const retired=['coreProfitShare','deductedProfit','marketCap','cashContent','sectorRelative5','sectorBreadth','sectorStrongDays','turnoverConcentration','institutionNetRatio'];
+ for(const name of retired){assert.equal(Object.hasOwn(fields,name),false);assert.ok(!Object.values(aliases).includes(name as any));assert.equal(validatePlanShape({...initialPlan,fundamental:[{id:'retired',field:name,op:'>=',value:0}]}),false)}
+ for(const preset of [...Object.values(fundamentalPresets),...Object.values(trendPresets)])assert.ok(preset.rules.every(r=>Object.hasOwn(fields,r.field)));
+ for(const prompt of ['资金集中度在0到20之间','扣非归母净利润至少1','总市值大于100']){const a=interpretIntent(prompt,initialPlan,'trend',[])!;assert.equal(a.kind,'unsupported');assert.equal(a.plan,undefined)}
+ assert.ok(Object.values(fields).every(f=>!f.pending));
+});

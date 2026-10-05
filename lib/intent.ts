@@ -6,14 +6,14 @@ export type Question={text:string;options:{label:string;message:string}[]};
 export type IntentResult={kind:'proposal'|'clarify'|'unsupported';summary:string;plan?:Plan;questions:Question[];unsupported:string[];assumptions:string[];changes:string[];mode:'local'|'model';baseRevision?:string;trace?:{requestId:string;elapsedMs:number;stages:string[];checks?:unknown}};
 export const aliases:Record<string,Field>={
  '经营现金流净額':'operatingCash','经营现金流净额':'operatingCash','现金利润比':'cashProfitRatio','经营现金流/净利润':'cashProfitRatio','市销率':'ps','ps':'ps','距5日前高':'breakout5Distance','近5日回撤':'pullback5','5日区间宽度':'range5','近5日机构上榜天数':'institution5Days',
- '归母净利率':'netMargin','扣非利润占比':'coreProfitShare','扣非利润占归母利润':'coreProfitShare','扣非归母净利润':'deductedProfit','atr14':'atr14Pct','atr':'atr14Pct','rsi14':'rsi14','rsi':'rsi14','收盘位置':'closePosition','距ma5':'ma5Distance','距5日均线':'ma5Distance','距ma10':'ma10Distance','距10日均线':'ma10Distance','ma5近3日变化':'ma5Slope','ma10近3日变化':'ma10Slope','近3日上穿ma5':'cross5In3','近3日上穿ma10':'cross10In3','近3日上穿ma20':'cross20In3',
+ '归母净利率':'netMargin','atr14':'atr14Pct','atr':'atr14Pct','rsi14':'rsi14','rsi':'rsi14','收盘位置':'closePosition','距ma5':'ma5Distance','距5日均线':'ma5Distance','距ma10':'ma10Distance','距10日均线':'ma10Distance','ma5近3日变化':'ma5Slope','ma10近3日变化':'ma10Slope','近3日上穿ma5':'cross5In3','近3日上穿ma10':'cross10In3','近3日上穿ma20':'cross20In3',
  '营收增长率':'revenueGrowth','营收增速':'revenueGrowth','营收同比':'revenueGrowth','营收同比增长':'revenueGrowth','利润增速':'profitGrowth','净利润增长率':'profitGrowth','归母净利润同比增长':'profitGrowth','净利润同比':'profitGrowth','归母净利润':'profit','净利润':'profit',
- 'pe(ttm)':'pe','pe':'pe','市盈率':'pe','pb':'pb','市净率':'pb','总市值':'marketCap','市值':'marketCap','roe':'roe','净资产收益率':'roe','资产负债率':'debtRatio','净利润现金含量':'cashContent',
+ 'pe(ttm)':'pe','pe':'pe','市盈率':'pe','pb':'pb','市净率':'pb','roe':'roe','净资产收益率':'roe','资产负债率':'debtRatio',
  'ma20相对ma60':'maSpread','均线差':'maSpread','ma20近5日变化':'maSlope','均线方向':'maSlope','均线斜率':'maSlope','收盘价距ma20':'maDistance','距ma20':'maDistance','均线距离':'maDistance','距20日均线':'maDistance',
  '近3日涨跌幅':'return3','3日涨幅':'return3','近5日涨跌幅':'return5','5日涨幅':'return5','近10日涨跌幅':'return10','10日涨幅':'return10','近20日涨跌幅':'return20','20日涨幅':'return20',
  '距近10日收盘高点回撤':'pullback10','近期回撤':'pullback10','高点回撤':'pullback10','近3日均量/此前20日均量':'volume3Ratio','近3日量能比':'volume3Ratio','缩量比':'volume3Ratio','当日量/此前20日均量':'volumeRatio','当日成交量倍数':'volumeRatio','成交量倍数':'volumeRatio',
  '收盘价距此前20日最高价':'breakoutDistance','距前高':'breakoutDistance','近10日高低区间宽度':'range10','区间宽度':'range10','60日年化波动率':'volatility','波动率':'volatility','60日区间最大回撤':'drawdown','最大回撤':'drawdown',
- '板块近5日相对基准涨幅':'sectorRelative5','板块上涨家数占比':'sectorBreadth','板块连续强势天数':'sectorStrongDays','持续强势天数':'sectorStrongDays','板块前5股成交额占比':'turnoverConcentration','成交额集中度':'turnoverConcentration','近20日机构席位上榜天数':'institutionDays','机构席位上榜天数':'institutionDays','当日机构席位净买入占成交额':'institutionNetRatio','机构席位净买入占比':'institutionNetRatio'};
+ '近20日机构席位上榜天数':'institutionDays','机构席位上榜天数':'institutionDays'};
 const num='(-?\\d+(?:\\.\\d+)?)';
 const base=():IntentResult=>({kind:'unsupported',summary:'',questions:[],unsupported:[],assumptions:[],changes:[],mode:'local'});
 export function localInterpret(message:string,current:Plan,style:Style,industries:string[]):IntentResult|null{
@@ -23,8 +23,8 @@ export function localInterpret(message:string,current:Plan,style:Style,industrie
  const rangeSuffix=suppliedRange?`在${suppliedRange[1]}到${suppliedRange[2]}之间`:'';
  const question=(text:string,options:Question['options']):IntentResult=>({...result,kind:'clarify',summary:'先确认这一处含义，现有条件尚未改变。',questions:[{text,options}]});
  if(/稳健|稳一点|更稳|稳一些/.test(msg))return question('“稳”是指价格波动较小，还是公司的财务负担较轻？',[{label:'价格波动较小',message:style==='trend'?'ATR上限设为4%':'波动率上限设为25%'},{label:'财务负担较轻',message:'资产负债率上限设为50%'}]);
- if(/机构活跃度/.test(msg))return question('机构活跃度没有唯一口径。选择你要研究的披露指标；必须加载完整披露才能使用，未上榜不能据此判断机构未参与。',[{label:style==='trend'?'近5日上榜天数':'近20日上榜天数',message:(style==='trend'?'近5日机构上榜天数':'机构席位上榜天数')+rangeSuffix},{label:'当日净买入占成交额',message:rangeSuffix?'机构席位净买入占比'+rangeSuffix:'机构席位净买入占比'}]);
- if(/资金集中度/.test(msg))return question('这里可以定义成交额集中度；它不等于机构持仓集中度。是否采用这个口径？',[{label:'采用板块前5股成交额占比',message:rangeSuffix?'成交额集中度'+rangeSuffix:'成交额集中度'}]);
+ if(/资金集中度|成交额集中度|板块.*(?:相对|上涨家数|强势天数)|持续强势天数|总市值|市值|扣非|净利润现金含量|机构席位净买入/.test(msg))return {...result,summary:'当前版本没有这个可验证指标，未修改任何条件。',unsupported:['该指标已从筛选库移除；不能用近似字段替代。可选择现有经营现金流、估值、短周期量价或机构上榜天数。']};
+ if(/机构活跃度/.test(msg))return question('机构活跃度不能代表全部机构交易。请选择可验证的机构席位上榜天数口径。',[{label:'近5日上榜天数',message:'近5日机构上榜天数'+rangeSuffix},{label:'近20日上榜天数',message:'机构席位上榜天数'+rangeSuffix}].sort((a,b)=>style==='trend'?0:(a.label.includes('20')?-1:1)));
  if(/回调/.test(msg)&&!Object.keys(trendPresets).some(k=>msg===trendPresets[k as keyof typeof trendPresets].label)&&!/[\d]/.test(msg))return question('你说的回调，更想观察价格回到哪里？',[{label:'10日均线附近',message:'距MA10在-2到3之间'},{label:'较近期高点回落',message:'近5日回撤在2到5之间'},{label:'采用缩量回踩示例',message:'使用缩量回踩10日线模板'}]);
  if(/放宽一点|放宽些|放宽点|收紧一点|收紧些/.test(msg)){
  const alias=Object.keys(aliases).sort((a,b)=>b.length-a.length).find(a=>msg.includes(a));
@@ -41,7 +41,7 @@ export function localInterpret(message:string,current:Plan,style:Style,industrie
  if(/^(不限行业|清除行业限制|所有行业)$/.test(msg)){plan.industry='';plan.sectors=(plan.sectors||[]).filter(s=>!industries.includes(s));return {...result,kind:'proposal',summary:'移除目录中的行业范围，其他题材和数值条件保留。',plan,changes:planChanges(current,plan)}}
  const sector=msg.match(/^(?:只看|行业(?:改为|设为|是|为)|板块(?:改为|设为|是|为))(.+?)(?:行业|板块)?$/);
  if(sector){const target=industries.find(i=>i.toLowerCase()===sector[1]||i.toLowerCase().replace(/ⅱ|ⅰ|Ⅱ|Ⅰ/g,'')===sector[1]);if(!target)return {...result,summary:'该名称不在当前行业目录中，未改变范围。',unsupported:[`「${sector[1]}」可能是概念题材或不同分类。当前只有样本所属行业，不能假设行业与题材相同。`]};plan.sectors=[target];plan.industry='';plan.themes=[];return {...result,kind:'proposal',summary:`行业限定为${target}，两套模型采用相同范围。`,plan,changes:planChanges(current,plan)}}
- if(['近5日机构上榜天数','机构席位上榜天数','机构席位净买入占比','成交额集中度'].includes(msg))return question('口径已明确。请输入你的上下限，或选择下面的示例；示例阈值不是推荐参数。',[{label:msg.includes('上榜天数')?'示例：1–5天':'示例：0%–20%',message:msg+(msg.includes('上榜天数')?'在1到5之间':'在0到20之间')}]);
+ if(['近5日机构上榜天数','机构席位上榜天数'].includes(msg))return question('口径已明确。请输入你的上下限，或选择下面的示例；示例阈值不是推荐参数。',[{label:msg.includes('上榜天数')?'示例：1–5天':'示例：0%–20%',message:msg+(msg.includes('上榜天数')?'在1到5之间':'在0到20之间')}]);
  const parts=msg.split(/[，,；;]|并且|而且/).filter(Boolean);let matched=0;
  for(const part of parts){
   const text=part.replace(/^(请|帮我)/,'').replace(/^把/,'');
@@ -63,7 +63,7 @@ export function localInterpret(message:string,current:Plan,style:Style,industrie
    else if(change){const existing=plan[group].filter(r=>r.field===field);if(existing.length!==1)return question(`${fields[field].label}有${existing.length}条边界，请明确修改上限还是下限。`,[{label:'修改上限',message:`${alias}上限设为${change[2]}`},{label:'修改下限',message:`${alias}下限设为${change[2]}`}]);next=[rule(field,existing[0].op,Number(change[2]))];direction=existing[0].op.startsWith('<')?'<':'>'}
    else{result.unsupported.push(part);continue}
   }
-  if(['profit','deductedProfit'].includes(field)&&part.includes('亿元'))next=next.map(r=>({...r,value:r.value*1e8}));
+  if(field==='profit'&&part.includes('亿元'))next=next.map(r=>({...r,value:r.value*1e8}));
   if(!add)plan[group]=plan[group].filter(r=>r.field!==field||(direction&&!r.op.startsWith(direction)));
   plan[group].push(...next);matched++;
  }
