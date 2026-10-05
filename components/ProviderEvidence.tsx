@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 export function ConnectionStatus(){
  const [state,setState]=useState<{model:{configured:boolean;model:string|null};fuyao:{configured:boolean};ifind:{configured:boolean}}|null>(null),[error,setError]=useState('');
  useEffect(()=>{fetch('/api/connections').then(r=>{if(!r.ok)throw Error();return r.json()}).then(x=>setState(x as NonNullable<typeof state>)).catch(()=>setError('无法读取服务端配置状态。'))},[]);
- return <div className="provider"><strong>服务端连接配置</strong>{error?<p className="warning">{error}</p>:!state?<p>正在检查配置…</p>:<p>模型：{state.model.configured?`${state.model.model} · 已配置`:'未配置'}；扶摇：{state.fuyao.configured?'已配置':'未配置'}；iFinD：{state.ifind.configured?'已配置':'未配置'}。</p>}<p>配置状态不代表调用成功。可在个股详情主动获取授权证据，查看成功回执或明确错误。当前筛选仍使用页面标明的留存快照。</p></div>
+ return <div className="provider"><strong>服务端连接配置</strong>{error?<p className="warning">{error}</p>:!state?<p>正在检查配置…</p>:<p>模型：{state.model.configured?`${state.model.model} · 已配置`:'未配置'}；扶摇：{state.fuyao.configured?'已配置':'未配置'}；iFinD：{state.ifind.configured?'已配置':'未配置'}。</p>}<p>配置状态不代表调用成功。可在个股详情主动获取授权证据，查看成功回执或明确错误。实际筛选来源以工作台顶部标注为准。</p></div>
 }
 export default function ProviderEvidence({code}:{code:string}){
  const [busy,setBusy]=useState(''),[error,setError]=useState(''),[result,setResult]=useState<{evidence:unknown;note:string}|null>(null);

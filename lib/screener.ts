@@ -3,14 +3,14 @@ export type Group='fundamental'|'trend';
 type Definition={label:string;unit:string;source:'financial'|'valuation'|'prices'|'sector'|'institution';raw:string;definition:string;group:Group;category:string;pending?:string};
 const f=(label:string,unit:string,source:Definition['source'],raw:string,definition:string,group:Group,category:string,pending?:string):Definition=>({label,unit,source,raw,definition,group,category,pending});
 export const fields={
- revenueGrowth:f('营收同比增长','%','financial','TOI_RATIO','2026年上半年累计营业总收入同比，采用披露口径。','fundamental','成长'),
+ revenueGrowth:f('营收同比增长','%','financial','TOI_RATIO','2026年上半年累计同比；扶摇采用营业收入，公开备用快照采用营业总收入。金融等行业需注意口径差异。','fundamental','成长'),
  profitGrowth:f('归母净利润同比增长','%','financial','PARENT_NETPROFIT_RATIO','2026年上半年累计归母净利润同比。低基数或亏损收窄不等同于盈利。','fundamental','成长'),
  profit:f('归母净利润','元','financial','PARENT_NETPROFIT','2026年上半年累计归母净利润。','fundamental','盈利'),
  pe:f('PE(TTM)','倍','valuation','PE_TTM','基准日总市值/近12个月归母净利润。非正值不适用正盈利估值比较。','fundamental','估值'),
  pb:f('PB','倍','valuation','PB_MRQ','基准日总市值/最近报告期归母净资产。非正值不适用。','fundamental','估值'),
  marketCap:f('总市值','亿元','valuation','TOTAL_MARKET_CAP / 1e8','基准日总市值，人民币亿元。','fundamental','规模'),
- roe:f('加权净资产收益率','%','financial','index_weighted_avg_roe','报告期累计加权ROE，不自动年化。','fundamental','盈利','待接入并核验财务指标'),
- debtRatio:f('资产负债率','%','financial','assets_debt_ratio','报告期负债/资产；跨行业尤其金融与非金融不可直接比较。','fundamental','财务风险','待接入并核验财务指标'),
+ roe:f('加权净资产收益率','%','financial','index_weighted_avg_roe','报告期累计加权ROE，不自动年化。','fundamental','盈利','扶摇加载后可用；公开备用快照无此字段'),
+ debtRatio:f('资产负债率','%','financial','assets_debt_ratio','报告期负债/资产；跨行业尤其金融与非金融不可直接比较。','fundamental','财务风险','扶摇加载后可用；公开备用快照无此字段'),
  cashContent:f('净利润现金含量','待核验','financial','net_profit_cash_content','供应商现金质量指标；单位及分母口径必须实测确认后启用。','fundamental','现金质量','待验证供应商单位及口径'),
  maSpread:f('MA20 相对 MA60','%','prices','(MA20 / MA60 - 1) × 100','正值表示20日均线高于60日均线。采用前复权收盘价。','trend','趋势'),
  maSlope:f('MA20 近5日变化','%','prices','(MA20[t] / MA20[t-5] - 1) × 100','当前20日均线相对5个观测日前的变化，正值为上升。','trend','趋势'),
@@ -30,14 +30,14 @@ export const fields={
  sectorBreadth:f('板块上涨家数占比','%','sector','rising constituents / valid constituents × 100','同一交易日板块内上涨家数/有有效涨跌幅的成分数，必须显示覆盖率。','trend','板块与主线','待接入完整板块成分与行情'),
  sectorStrongDays:f('板块连续强势天数','交易日','sector','consecutive top-quintile sector relative-return ranks','截至基准日，板块5日相对涨幅排名连续处于同类板块前20%的交易日数；不是轮动天数。','trend','板块与主线','待接入至少一个月的同口径板块排名'),
  turnoverConcentration:f('板块前5股成交额占比','%','sector','top5 turnover / all valid constituent turnover × 100','板块成交额集中度，不是机构持仓或真实资金持有集中度。需完整成分及成交额。','trend','板块与主线','待接入板块完整成交额'),
- institutionDays:f('近20日机构席位上榜天数','交易日','institution','count(distinct date with org seats; range_days=1)','仅计有机构席位记录的当日榜，排除3日榜重叠。没有覆盖完整日期时不能把未记录当0。','trend','机构披露','待接入并核验20日龙虎榜机构席位记录'),
- institutionNetRatio:f('当日机构席位净买入占成交额','%','institution','org_net_value / amount × 100; range_days=1','仅当日龙虎榜披露样本。未上榜不代表机构不活跃；非全市场机构交易统计。','trend','机构披露','待接入并核验当日机构席位榜'),
+ institutionDays:f('近20日机构席位上榜天数','交易日','institution','count(distinct date with org seats; range_days=1)','仅计有机构席位记录的当日榜，排除3日榜重叠。没有覆盖完整日期时不能把未记录当0。','trend','机构披露','加载完整20日机构榜后可用'),
+ institutionNetRatio:f('当日机构席位净买入占成交额','%','institution','org_net_value / amount × 100; range_days=1','仅当日龙虎榜披露样本。未上榜不代表机构不活跃；非全市场机构交易统计。','trend','机构披露','未加载、未见当日机构榜或缺少有效成交金额'),
 } as const;
 export type Field=keyof typeof fields;
 export type Rule={id:string;field:Field;op:'>'|'>='|'<'|'<=';value:number};
 export type Plan={fundamental:Rule[];trend:Rule[];industry:string};
 export type Bar={date:string;open:number;high:number;low:number;close:number;volume:number;ma20?:number|null;ma60?:number|null};
-export type Stock={code:string;name:string;industry:string;metrics:Partial<Record<Field|'price'|'revenue',number|null>>;errors:string[];sources:Record<string,string>;prices:{date:string;close:number}[];bars?:Bar[];evidencePath:string;reportDate?:string;disclosedAt?:string;tradeDate?:string;provenance?:Record<string,{provider:string;date:string;formula?:string}>};
+export type Stock={code:string;name:string;industry:string;metrics:Partial<Record<Field|'price'|'revenue',number|null>>;evidence?:unknown;errors:string[];sources:Record<string,string>;prices:{date:string;close:number}[];bars?:Bar[];evidencePath:string;reportDate?:string;disclosedAt?:string;tradeDate?:string;provenance?:Record<string,{provider:string;date:string;formula?:string}>};
 export type Snapshot={version:string;asOf:string;financialPeriod:string;fetchedAt:string;source:string;universe:string;limitations:string[];stocks:Stock[]};
 export type Check={rule:Rule;status:'pass'|'fail'|'unknown';actual:number|null;reason:string};
 export type Issue={kind:'conflict'|'duplicate'|'tradeoff'|'unavailable';text:string;ids:string[];removeId?:string};

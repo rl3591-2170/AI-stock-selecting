@@ -71,6 +71,8 @@ export default defineConfig(async ({ command }) => {
           ...localBindingConfig,
           ...(command === "serve"
             ? {
+                // Local-only bindings are injected in memory; builds never contain these values.
+                vars: Object.fromEntries(["LLM_API_KEY","LLM_BASE_URL","LLM_MODEL","HITHINK_FINANCE_API_KEY","IFIND_API_TOKEN"].filter(k=>process.env[k]).map(k=>[k,process.env[k]!])),
                 services: [
                   {
                     binding: "CONNECTORS",
