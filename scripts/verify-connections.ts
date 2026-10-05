@@ -1,0 +1,9 @@
+import {mkdir,writeFile} from 'node:fs/promises';
+import {createFuyao,ProviderError} from '../lib/providers/fuyao.ts';
+import {createIfind} from '../lib/providers/ifind.ts';
+const report:{provider:string;status:string;detail:string}[]=[];
+const errorCode=(e:unknown)=>e instanceof ProviderError?e.code:e instanceof Error&&/^IFIND_[A-Z_0-9]+$/.test(e.message)?e.message:'NETWORK_OR_TIMEOUT';
+try{const r=await fetch(new URL('/chat/completions',process.env.LLM_BASE_URL),{method:'POST',headers:{Authorization:`Bearer ${process.env.LLM_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(15000),body:JSON.stringify({model:process.env.LLM_MODEL,messages:[{role:'user',content:'只回复JSON：{"ok":true}'}],max_tokens:100,temperature:0})});const d=await r.json() as {choices?:{message?:{content?:string}}[]};if(!r.ok)throw Error('HTTP_'+r.status);if(!d.choices?.[0]?.message?.content)throw Error('EMPTY_MODEL_RESPONSE');report.push({provider:'deepseek',status:'verified',detail:process.env.LLM_MODEL||''})}catch(e){report.push({provider:'deepseek',status:'failed',detail:e instanceof Error&&/^(HTTP_\d+|EMPTY_MODEL_RESPONSE)$/.test(e.message)?e.message:'NETWORK_OR_TIMEOUT'})}
+try{const r=await createFuyao().resolve('600519');report.push({provider:'fuyao',status:'metadata_verified_only',detail:r.ticker.thscode})}catch(e){report.push({provider:'fuyao',status:'failed',detail:errorCode(e)})}
+try{const r=await createIfind().financials('贵州茅台2026年半年报加权净资产收益率，列出报告期和单位');report.push({provider:'ifind',status:'sample_call_verified',detail:`${r.content.length} content blocks`})}catch(e){report.push({provider:'ifind',status:'failed',detail:errorCode(e)})}
+const dir=new URL('../work/',import.meta.url);await mkdir(dir,{recursive:true});await writeFile(new URL('connection-report.json',dir),JSON.stringify({checkedAt:new Date().toISOString(),report},null,2));console.log(JSON.stringify(report));if(report.some(r=>r.status==='failed'))process.exitCode=1;

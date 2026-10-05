@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createFuyao} from '../lib/providers/fuyao.ts';
+const mock=(fn:()=>Response)=>async()=>fn() as Response;
+test('provider refuses missing key without making request',async()=>{let called=false;const api=createFuyao({key:'',fetcher:async()=>{called=true;return new Response()}});await assert.rejects(api.resolve('600519'),/MISSING_KEY/);assert.equal(called,false)});
+test('HTTP 200 business error is not success and authentication is not retried',async()=>{let calls=0;const api=createFuyao({key:'mock',fetcher:mock(()=>{calls++;return Response.json({code:2003,request_id:'test-req',data:null})})});await assert.rejects(api.resolve('600519'),/2003.*test-req/);assert.equal(calls,1)});
+test('thscode is resolved exactly and ambiguity is not guessed',async()=>{const item={thscode:'600519.SH',ticker:'600519',name:'测试',asset_type:'a-share'};const api=createFuyao({key:'mock',fetcher:mock(()=>Response.json({code:0,data:{item:[item]}}))});assert.equal((await api.resolve('600519')).ticker.thscode,'600519.SH');await assert.rejects(api.resolve('600'),/NOT_RESOLVED/)});
+test('retry is bounded and nonnumeric/null historical prices rejected',async()=>{let calls=0;const a=createFuyao({key:'mock',sleep:async()=>{},fetcher:mock(()=>{calls++;return Response.json({code:4001,data:null})})});await assert.rejects(a.resolve('600519'),/4001/);assert.equal(calls,3);const b=createFuyao({key:'mock',fetcher:mock(()=>Response.json({code:0,data:{item:[{date_ms:Date.parse('2026-09-30T00:00:00+08:00'),close_price:null}]}}))});await assert.rejects(b.historical('600519.SH','2026-09-01','2026-09-30'),/INVALID_PRICE_BAR/)});
