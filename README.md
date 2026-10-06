@@ -8,7 +8,12 @@
 
 [源代码仓库](https://github.com/rl3591-2170/AI-stock-selecting)
 
-访问说明：网站目前仅所有者可访问，评审前需要开放链接访问或邀请指定访客。网站与 GitHub 仓库的访问权限分别设置。
+访问说明：网站已开放公开访问，直接分享上方链接即可，无需登录站点所有者账号。网站与 GitHub 仓库的访问权限分别设置。
+
+提交文档：
+
+- [AI 使用与验证记录（Word）](docs/submission/知条件_AI使用与验证记录.docx)
+- [测试说明（Word）](docs/submission/知条件_测试说明.docx)
 
 ## 一、怎么用
 
