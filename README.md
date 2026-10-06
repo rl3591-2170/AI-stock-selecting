@@ -4,11 +4,11 @@
 
 此产品不替用户做买卖决定，仅供参考。
 
+链接：
 [在线工作台](https://stock-lens-strategy-lab.ruoshuilei.chatgpt.site/)
 
 [源代码仓库](https://github.com/rl3591-2170/AI-stock-selecting)
 
-访问说明：网站目前仅所有者可访问，评审前需要开放链接访问或邀请指定访客。网站与 GitHub 仓库的访问权限分别设置。
 
 ## 一、怎么用
 
