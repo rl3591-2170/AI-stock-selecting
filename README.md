@@ -14,8 +14,8 @@
 
 提交文档：
 
-- [AI 使用与验证记录（Word）](docs/submission/知条件_AI使用与验证记录.docx)
-- [测试说明（Word）](docs/submission/知条件_测试说明.docx)
+- [AI 使用与验证记录（PDF）](docs/submission/知条件_AI使用与验证记录.pdf)
+- [测试说明（PDF）](docs/submission/知条件_测试说明.pdf)
 
 ## 一、怎么用
 
