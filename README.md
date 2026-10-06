@@ -5,9 +5,10 @@
 此产品不替用户做买卖决定，仅供参考。
 
 链接：
-[在线工作台](https://stock-lens-strategy-lab.ruoshuilei.chatgpt.site/)
 
-[源代码仓库](https://github.com/rl3591-2170/AI-stock-selecting)
+（1）[在线工作台](https://stock-lens-strategy-lab.ruoshuilei.chatgpt.site/)
+
+（2）[源代码仓库](https://github.com/rl3591-2170/AI-stock-selecting)
 
 
 ## 一、怎么用
